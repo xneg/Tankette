@@ -1,10 +1,8 @@
-﻿using System;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks.Dataflow;
-using Tankette;
 
-namespace DataFlowBenchmark
+namespace Tankette
 {
     public static class BlobsProducer
     {

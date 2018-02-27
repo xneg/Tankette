@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
-namespace DataFlowBenchmark
+namespace Tankette
 {
     // TODO: Add Stop method.
 
