@@ -5,41 +5,42 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
-namespace DataFlowBenchmark
+namespace Tankette
 {
     class Program
     {
         static void Main(string[] args)
         {
-            var cancellationTokenSource = new CancellationTokenSource();
+            //var cancellationTokenSource = new CancellationTokenSource();
 
-            var blobsProducer = BlobsProducer.CreateAndStartBlobsSourceBlock(0, 1024 * 1024, 200, cancellationTokenSource.Token);
+            //var blobsProducer = BlobsProducer.CreateAndStartBlobsSourceBlock(0, 1024 * 1024, 200, cancellationTokenSource.Token);
 
-            var md5Hash = MD5.Create();
+            //var md5Hash = MD5.Create();
 
-            var loaderBlock = new LoaderBlock<byte[]>(
-                async (b) =>
-                {
-                    await Task.Delay(500);
-                    Console.WriteLine(GetMd5Hash(md5Hash, b));
-                 },
-                200,
-                10,
-                200,
-                null,
-                CancellationToken.None);
+            //var loaderBlock = new LoaderBlock<byte[]>(
+            //    async (b) =>
+            //    {
+            //        await Task.Delay(500);
+            //        Console.WriteLine(GetMd5Hash(md5Hash, b));
+            //     },
+            //    200,
+            //    10,
+            //    200,
+            //    null,
+            //    CancellationToken.None);
 
-            //var actionBlock = new ActionBlock<byte[]>(b => 
-            //{
-            //    Console.WriteLine(GetMd5Hash(md5Hash, b));
-            //},
-            //new ExecutionDataflowBlockOptions() { BoundedCapacity = 10 });
+            ////var actionBlock = new ActionBlock<byte[]>(b => 
+            ////{
+            ////    Console.WriteLine(GetMd5Hash(md5Hash, b));
+            ////},
+            ////new ExecutionDataflowBlockOptions() { BoundedCapacity = 10 });
 
-            //blobsProducer.LinkTo(actionBlock);
-            blobsProducer.LinkTo(loaderBlock);
+            ////blobsProducer.LinkTo(actionBlock);
+            //blobsProducer.LinkTo(loaderBlock);
+            ProducersBenchmark.Do().Wait();
 
             Console.ReadLine();
-            Console.WriteLine("Hello World!");
+            //Console.WriteLine("Hello World!");
         }
 
         static string GetMd5Hash(MD5 md5Hash, byte[] input)
