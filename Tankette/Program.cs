@@ -37,7 +37,8 @@ namespace Tankette
 
             ////blobsProducer.LinkTo(actionBlock);
             //blobsProducer.LinkTo(loaderBlock);
-            ProducersBenchmark.Do().Wait();
+            //ProducersBenchmark.Do().Wait();
+            ProducersBenchmark.TestSimpleEffectiveProducer().Wait();
 
             Console.ReadLine();
             //Console.WriteLine("Hello World!");

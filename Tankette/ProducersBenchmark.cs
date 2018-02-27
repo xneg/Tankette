@@ -23,64 +23,70 @@ namespace Tankette
                 MaxDegreeOfParallelism = Environment.ProcessorCount,
             };
 
-            var linkOptions = new DataflowLinkOptions
+            var blobsProducer3 = BlobsProducer.CreateAndStartBlobsSourceBlock(count, () => CreateBlob(size), boundedCapacity, CancellationToken.None);
+            await DoTest("One thread first version", blobsProducer3, options).ConfigureAwait(false);
+
+            var blobsProducer1 = OtherBlobsProducer
+                .CreateAndStartBlobsSourceBlock(() => CreateBlob(size), count, boundedCapacity, Environment.ProcessorCount, CancellationToken.None);
+            await DoTest("OtherBlobsProducer 4 parallels", blobsProducer1, options).ConfigureAwait(false);
+
+            var blobsProducer2 = new OtherProducer<byte[]>(() => CreateBlob(size), options);
+            blobsProducer2.StartEngine(count, CancellationToken.None);
+            await DoTest("Simple effective producer 4 parallels", blobsProducer2.SourceBlock, options).ConfigureAwait(false);
+
+            var blobsProducer4 = OtherBlobsProducer
+                .CreateAndStartBlobsSourceBlock(() => CreateBlob(size), count, boundedCapacity, 2, CancellationToken.None);
+            await DoTest("OtherBlobsProducer 2 parallels", blobsProducer4, options).ConfigureAwait(false);
+
+            var blobsProducer6 = new OtherProducer<byte[]>(() => CreateBlob(size), options);
+            blobsProducer6.StartEngine(count, CancellationToken.None);
+            var options6 = options;
+            options6.MaxDegreeOfParallelism = 1;
+            await DoTest("Simple effective producer 1 parallels", blobsProducer6.SourceBlock, options6).ConfigureAwait(false);
+
+            var blobsProducer7 = OtherBlobsProducer
+               .CreateAndStartBlobsSourceBlock(() => CreateBlob(size), count, boundedCapacity, 1, CancellationToken.None);
+            await DoTest("OtherBlobsProducer 1 parallels", blobsProducer7, options).ConfigureAwait(false);
+
+            var blobsProducer5 = new OtherProducer<byte[]>(() => CreateBlob(size), options);
+            blobsProducer5.StartEngine(count, CancellationToken.None);
+            var options5 = options;
+            options5.MaxDegreeOfParallelism = 2;
+            await DoTest("Simple effective producer 2 parallels", blobsProducer5.SourceBlock, options5).ConfigureAwait(false);
+        }
+
+        public static async Task TestSimpleEffectiveProducer()
+        {
+            const int count = 10000;
+            const int size = 1024 * 1024;
+            const int boundedCapacity = 100;
+
+            for (var i = Environment.ProcessorCount; i >= 1; i--)
+            {
+                var options = new ExecutionDataflowBlockOptions
+                {
+                    BoundedCapacity = boundedCapacity,
+                    MaxDegreeOfParallelism = i,
+                };
+                var blobsProducer = new OtherProducer<byte[]>(() => CreateBlob(size), options);
+                blobsProducer.StartEngine(count, CancellationToken.None);
+                await DoTest($"Benchmark {i}", blobsProducer.SourceBlock, options).ConfigureAwait(false);
+            }
+        }
+
+        private static async Task DoTest(string comment, ISourceBlock<byte[]> sourceBlock, ExecutionDataflowBlockOptions options)
+        {
+            GC.Collect(2, GCCollectionMode.Forced, true, true);
+            var stopwatch = new Stopwatch();
+            var actionBlock = new ActionBlock<byte[]>(b => { }, options);
+            sourceBlock.LinkTo(actionBlock, new DataflowLinkOptions
             {
                 PropagateCompletion = true
-            };
-
-            GC.Collect();
-
-            var stopwatch = new Stopwatch();
-
-            stopwatch.Reset();
-            GC.Collect();
-
+            });
             stopwatch.Start();
-            var actionBlock3 = new ActionBlock<byte[]>(b => { }, options);
-            var blobsProducer3 = OtherBlobsProducer.CreateAndStartBlobsSourceBlock(() => CreateBlob(size), count, boundedCapacity, CancellationToken.None);
-            blobsProducer3.LinkTo(actionBlock3, linkOptions);
-
-            await actionBlock3.Completion.ConfigureAwait(false);
+            await actionBlock.Completion.ConfigureAwait(false);
             stopwatch.Stop();
-
-            Console.WriteLine($"Variant 3: {stopwatch.ElapsedTicks} Memory: {GC.GetTotalMemory(false)}");
-
-            stopwatch.Reset();
-            GC.Collect();
-
-            stopwatch.Start();
-            var actionBlock2 = new ActionBlock<byte[]>(b => { }, options);
-            var blobsProducer2 = new OtherProducer<byte[]>(() => CreateBlob(size), options);
-            blobsProducer2.SourceBlock.LinkTo(actionBlock2, linkOptions);
-            blobsProducer2.StartEngine(count, CancellationToken.None);
-
-            await actionBlock2.Completion.ConfigureAwait(false);
-            stopwatch.Stop();
-
-            Console.WriteLine($"Variant 2: {stopwatch.ElapsedTicks} Memory: {GC.GetTotalMemory(false)}");
-
-            //stopwatch.Start();
-            //var actionBlock1 = new ActionBlock<byte[]>(b => { }, options);
-            //var blobsProducer1 = BlobsProducer.CreateAndStartBlobsSourceBlock(count, size, boundedCapacity, CancellationToken.None);
-            //blobsProducer1.LinkTo(actionBlock1, linkOptions);
-
-            //await actionBlock1.Completion.ConfigureAwait(false);
-            //stopwatch.Stop();
-
-            //Console.WriteLine($"Variant 1: {stopwatch.ElapsedTicks} Memory: {GC.GetTotalMemory(false)}");
-
-            //stopwatch.Reset();
-            //GC.Collect();
-
-            //stopwatch.Start();
-            //var actionBlock3 = new ActionBlock<byte[]>(b => { }, options);
-            //var blobsProducer3 = OtherBlobsProducer.CreateAndStartBlobsSourceBlock(count, size, boundedCapacity, CancellationToken.None);
-            //blobsProducer3.LinkTo(actionBlock3, linkOptions);
-
-            //await actionBlock3.Completion.ConfigureAwait(false);
-            //stopwatch.Stop();
-
-            //Console.WriteLine($"Variant 3: {stopwatch.ElapsedTicks} Memory: {GC.GetTotalMemory(false)}");
+            Console.WriteLine($"{comment, -50} Elapsed ticks: {stopwatch.ElapsedTicks} Memory: {GC.GetTotalMemory(false)}");
         }
 
         private static byte[] CreateBlob(int size)

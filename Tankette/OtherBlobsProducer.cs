@@ -9,12 +9,22 @@ namespace Tankette
     {
         private static readonly RNGCryptoServiceProvider RngCsp = new RNGCryptoServiceProvider();
 
-        public static ISourceBlock<byte[]> CreateAndStartBlobsSourceBlock(Func<byte[]> task, int count, int boundedCapacity, CancellationToken cancellationToken)
+        public static ISourceBlock<byte[]> CreateAndStartBlobsSourceBlock(
+            Func<byte[]> task,
+            int count,
+            int boundedCapacity,
+            int parallelism,
+            CancellationToken cancellationToken)
         {
-            return BlobsSourceBlock(() => task(), count, boundedCapacity, cancellationToken);
+            return BlobsSourceBlock(() => task(), count, boundedCapacity, parallelism, cancellationToken);
         }
 
-        private static ISourceBlock<byte[]> BlobsSourceBlock(Func<byte[]> task, int count, int boundedCapacity, CancellationToken cancellationToken)
+        private static ISourceBlock<byte[]> BlobsSourceBlock(
+            Func<byte[]> task,
+            int count,
+            int boundedCapacity,
+            int parallelism,
+            CancellationToken cancellationToken)
         {
             var engine = new Engine(boundedCapacity);
             var block = new TransformBlock<int, byte[]>(
@@ -22,7 +32,7 @@ namespace Tankette
                 new ExecutionDataflowBlockOptions
                 {
                     BoundedCapacity = boundedCapacity,
-                    MaxDegreeOfParallelism = Environment.ProcessorCount,
+                    MaxDegreeOfParallelism = parallelism,
                 });
             engine.SourceBlock.LinkTo(block, new DataflowLinkOptions { PropagateCompletion = true });
             engine.StartEngine(count, cancellationToken);
