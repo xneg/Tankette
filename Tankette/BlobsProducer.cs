@@ -10,7 +10,9 @@ namespace Tankette
 
         public static ISourceBlock<byte[]> CreateAndStartBlobsSourceBlock(int count, int size, int boundedCapacity, CancellationToken cancellationToken)
         {
-            var producer = new Producer<byte[]>(() => CreateBlob(size), boundedCapacity);
+            var producer = new Producer<byte[]>(
+                () => CreateBlob(size),
+                new ExecutionDataflowBlockOptions { BoundedCapacity = boundedCapacity });
             if (count == 0)
                 producer.StartEngine(cancellationToken);
             else

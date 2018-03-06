@@ -5,12 +5,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
-namespace DataFlowBenchmark
+namespace Tankette
 {
     /// <summary>
-    /// Блок, создающий некую нагрузку с заданной частотой.
+    /// Block generating load with constant frequency.
     /// </summary>
-    /// <typeparam name="T">Входящий тип.</typeparam>
+    /// <typeparam name="T">Input type.</typeparam>
     public class LoaderBlock<T> : ITargetBlock<T>
     {
         private readonly Stopwatch _stopwatch = new Stopwatch();

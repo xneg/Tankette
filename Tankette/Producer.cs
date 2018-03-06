@@ -5,20 +5,20 @@ using System.Threading.Tasks.Dataflow;
 
 namespace Tankette
 {
-    // TODO: Add Stop method.
-
-    internal class Producer<T>
+    /// <summary>
+    /// Producer that generates data for LoaderBlock.
+    /// </summary>
+    /// <typeparam name="T">Output type.</typeparam>
+    public class Producer<T>
     {
-        private BufferBlock<T> _bufferBlock;
-        private Func<T> _produce;
-        private bool _isLooping = false;
+        private TransformBlock<int, T> _transformBlock;
+        private bool _isRunning = false;
 
-        public ISourceBlock<T> SourceBlock => _bufferBlock;
+        public ISourceBlock<T> SourceBlock => _transformBlock;
 
-        public Producer(Func<T> produce, int boundedCapacity)
+        public Producer(Func<T> produce, ExecutionDataflowBlockOptions options)
         {
-            _produce = produce;
-            _bufferBlock = new BufferBlock<T>(new DataflowBlockOptions { BoundedCapacity = boundedCapacity });
+            _transformBlock = new TransformBlock<int, T>(i => produce(), options);
         }
 
         /// <summary>
@@ -42,7 +42,7 @@ namespace Tankette
 
         private void StartEngineInternal(bool isInfintite, int tactsCount, CancellationToken cancellationToken)
         {
-            if (_isLooping)
+            if (_isRunning)
                 return;
 
             Task.Run(async () =>
@@ -50,17 +50,17 @@ namespace Tankette
                 var counter = 0;
                 while (isInfintite || counter < tactsCount)
                 {
-                    await _bufferBlock.SendAsync(_produce());
+                    await _transformBlock.SendAsync(0);
                     if (cancellationToken.IsCancellationRequested)
                         return;
                     counter++;
                 }
             }, cancellationToken).ContinueWith((task) =>
             {
-                _bufferBlock.Complete();
+                _transformBlock.Complete();
             });
 
-            _isLooping = true;
+            _isRunning = true;
         }
     }
 }
